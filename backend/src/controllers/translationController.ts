@@ -119,22 +119,25 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
       translationStore.update(jobId, { pageCount: extraction.pageCount, translatedPageCount: 0, progress: 0 });
       wsManager.broadcast(jobId, translationStore.get(jobId)!);
 
-      // 3. Group blocks by page and translate page-by-page to track progress
-      const blocksByPage: TextBlock[][] = Array.from(
-        { length: Math.max(extraction.pageCount, 1) },
-        () => []
+      // 3. Group blocks by page and translate page-by-page to track progress.
+      // Determine the number of pages from both the extraction result and the
+      // actual block indices so out-of-range pageIndex values are never dropped.
+      const maxPageIndex = extraction.textBlocks.reduce(
+        (max, b) => Math.max(max, b.pageIndex ?? 0),
+        0
       );
+      const totalPages = Math.max(extraction.pageCount, maxPageIndex + 1, 1);
+
+      const blocksByPage: TextBlock[][] = Array.from({ length: totalPages }, () => []);
       for (const block of extraction.textBlocks) {
         const idx = block.pageIndex ?? 0;
-        if (!blocksByPage[idx]) blocksByPage[idx] = [];
         blocksByPage[idx].push(block);
       }
 
       const allTranslatedBlocks: TextBlock[] = [];
-      const totalPages = blocksByPage.length;
 
       for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
-        const pageBlocks = blocksByPage[pageIdx] ?? [];
+        const pageBlocks = blocksByPage[pageIdx];
         const translatedPage = await translationService.translateBlocks(
           pageBlocks,
           resolvedSource,

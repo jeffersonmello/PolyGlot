@@ -4,7 +4,8 @@ import type { TranslationRecord } from '../types';
 function getWsUrl(): string {
   const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
   if (apiUrl) {
-    return apiUrl.replace(/^http/, 'ws').replace(/\/api\/?$/, '/ws');
+    // Preserve 's' from https → wss; http → ws
+    return apiUrl.replace(/^https?/, (p) => (p === 'https' ? 'wss' : 'ws')).replace(/\/api\/?$/, '/ws');
   }
   if (import.meta.env.DEV) {
     return 'ws://localhost:3001/ws';
@@ -49,8 +50,12 @@ export function useJobWebSocket(
 
     wsRef.current = ws;
 
+    let closed = false;
+
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'subscribe', jobId }));
+      if (!closed) {
+        ws.send(JSON.stringify({ type: 'subscribe', jobId }));
+      }
     };
 
     ws.onmessage = (event) => {
@@ -73,6 +78,7 @@ export function useJobWebSocket(
     };
 
     return () => {
+      closed = true;
       ws.close();
       wsRef.current = null;
     };

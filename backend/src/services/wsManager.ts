@@ -57,12 +57,18 @@ class WsManager {
     if (!clients || clients.size === 0) return;
 
     const msg = JSON.stringify({ type: 'job_update', data: record });
+    const stale: WebSocket[] = [];
+
     for (const ws of clients) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(msg);
       } else {
-        clients.delete(ws);
+        stale.push(ws);
       }
+    }
+
+    for (const ws of stale) {
+      clients.delete(ws);
     }
   }
 
