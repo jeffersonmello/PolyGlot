@@ -1,32 +1,40 @@
-# React + TypeScript + Vite
+# PolyGlot Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite application for uploading PDFs, configuring translation options, tracking translation jobs, and downloading translated files.
 
-Currently, two official plugins are available:
+## Requirements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 20+
+- npm 10+
 
-## React Compiler
+## Environment
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Create `frontend/.env` from `frontend/.env.example`.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```env
+VITE_API_URL=http://localhost:3001/api
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Scripts
+
+```bash
+npm run dev    # start Vite dev server
+npm run lint   # run Oxlint
+npm run build  # type-check + production build
+npm run preview
+```
+
+Default dev URL: `http://localhost:5173`
+
+## Main folders
+
+- `src/components` — upload UI, status, options, history table
+- `src/pages` — translator and history pages
+- `src/services` — API client wrappers
+- `src/hooks` — polling and side-effect hooks
+- `src/types` — shared frontend types
+
+## Backend dependency
+
+The frontend expects the backend API to be available at `VITE_API_URL`.
+For local development with default settings, start backend on `http://localhost:3001`.
