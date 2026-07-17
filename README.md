@@ -247,7 +247,6 @@ Translation options example:
 
 ```bash
 cd backend
-npm run lint   # currently requires ESLint in the backend environment
 npm run build
 npm test
 ```
