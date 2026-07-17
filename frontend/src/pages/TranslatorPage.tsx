@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import FileUploadZone from '../components/FileUploadZone';
 import LanguageSelector from '../components/LanguageSelector';
@@ -55,7 +55,7 @@ const TranslatorPage: React.FC = () => {
     if (wsError) toast.error(`Status update error: ${wsError}`);
   }, [wsError]);
 
-  const handleTranslate = async () => {
+  const handleTranslate = useCallback(async () => {
     if (files.length === 0) {
       toast.warn('Please select at least one PDF file');
       return;
@@ -94,7 +94,7 @@ const TranslatorPage: React.FC = () => {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  };
+  }, [files, targetLang, batchMode, sourceLang, options]);
 
   const isProcessing = isUploading || (job && (job.status === 'pending' || job.status === 'processing'));
 
@@ -107,7 +107,7 @@ const TranslatorPage: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, [isProcessing, files.length, handleTranslate]);
 
   return (
     <div className="space-y-6">

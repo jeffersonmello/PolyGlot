@@ -92,8 +92,8 @@ const HistoryTable: React.FC<Props> = ({ records, onDelete }) => {
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-7 h-7 rounded-md bg-red-50 shrink-0">
-                      <FileText className="w-3.5 h-3.5 text-red-400" />
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-slate-100 shrink-0">
+                      <FileText className="w-4 h-4 text-slate-500" />
                     </div>
                     <span
                       className="font-mono text-xs font-medium text-foreground/80 max-w-[120px] sm:max-w-[200px] truncate"

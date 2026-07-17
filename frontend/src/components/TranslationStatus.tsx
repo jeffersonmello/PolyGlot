@@ -46,8 +46,8 @@ const TranslationStatus: React.FC<Props> = ({ job }) => {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 shrink-0">
-              <FileText className="w-4 h-4 text-red-500" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 shrink-0">
+              <FileText className="w-4 h-4 text-slate-500" />
             </div>
             <span
               className="font-semibold text-sm font-mono truncate text-foreground/90"
