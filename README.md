@@ -1,23 +1,42 @@
 # 🌐 PolyGlot — PDF Translation System
 
-A full-stack web application that translates PDF documents from one language to another while preserving the original document's formatting, fonts, layout design, and visual structure.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/jeffersonmello/PolyGlot)](https://github.com/jeffersonmello/PolyGlot/commits)
+[![Issues](https://img.shields.io/github/issues/jeffersonmello/PolyGlot)](https://github.com/jeffersonmello/PolyGlot/issues)
+[![Stars](https://img.shields.io/github/stars/jeffersonmello/PolyGlot?style=social)](https://github.com/jeffersonmello/PolyGlot/stargazers)
+
+A full-stack web application that translates PDF documents from one language to another while preserving layout, formatting, and visual structure.
+
+## 📚 Table of Contents
+
+- [✨ Features](#-features)
+- [🖥 Tech Stack](#-tech-stack)
+- [🚀 Quick Start](#-quick-start)
+- [🐳 Docker Deployment](#-docker-deployment)
+- [⚙️ Configuration](#️-configuration)
+- [🔌 Translation Provider Priority](#-translation-provider-priority)
+- [📡 API Reference](#-api-reference)
+- [🧪 Testing and Validation](#-testing-and-validation)
+- [📁 Project Structure](#-project-structure)
+- [🔒 Privacy & Security](#-privacy--security)
+- [🗺 Roadmap](#-roadmap)
+- [📄 License](#-license)
 
 ---
 
 ## ✨ Features
 
 - **35+ supported languages** with auto-detection
-- **Preserve formatting** — fonts, sizes, colors, layout
+- **Preserve formatting** — fonts, sizes, colors, and layout
 - **Preserve images, tables & charts** positions
-- **Mixed-language handling** — detect German PDF with Latin citations, etc.
-- **Citation preservation** — keep quoted text in its original language
-- **Batch processing** — translate multiple PDFs at once
-- **Translation history** — view all past jobs with download links
-- **Upload progress bar** with real-time status polling
-- **Pluggable translation providers** — DeepL, OpenAI, or built-in mock
-- **Automatic fallback** — if no API key is set, the mock provider is used
-- **Docker-ready** — one command to run the entire stack
-- **Privacy-first** — uploaded files are deleted after processing
+- **Mixed-language handling** for multilingual documents
+- **Citation preservation** options
+- **Batch processing** for multiple PDFs
+- **Translation history** with download links
+- **Real-time upload progress** with status polling
+- **Provider fallback chain** — DeepL → OpenAI → Mock
+- **Docker-ready** deployment
+- **Privacy-first** processing with cleanup
 
 ---
 
@@ -25,13 +44,13 @@ A full-stack web application that translates PDF documents from one language to 
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
+| Frontend | React 19 + TypeScript + Vite |
 | Backend | Node.js 20 + Express + TypeScript |
 | PDF Extract | pdf-parse |
 | PDF Generate | pdf-lib |
 | Translation | DeepL API / OpenAI API / Mock |
 | HTTP Client | Axios |
-| Styling | Pure CSS (no framework) |
+| Styling | Pure CSS |
 | Containerisation | Docker + Docker Compose |
 
 ---
@@ -41,63 +60,61 @@ A full-stack web application that translates PDF documents from one language to 
 ### Prerequisites
 
 - **Node.js 20+** and **npm 10+**
-- (Optional) A [DeepL API key](https://www.deepl.com/pro-api) or [OpenAI API key](https://platform.openai.com/api-keys)
+- (Optional) [DeepL API key](https://www.deepl.com/pro-api) or [OpenAI API key](https://platform.openai.com/api-keys)
 
-### 1. Clone the repository
+### 1) Clone
 
 ```bash
 git clone https://github.com/jeffersonmello/PolyGlot.git
 cd PolyGlot
 ```
 
-### 2. Configure the backend
+### 2) Configure backend environment
 
 ```bash
 cp backend/.env.example backend/.env
-# Open backend/.env and fill in your API keys (optional)
+# Optional: add DEEPL_API_KEY and/or OPENAI_API_KEY
 ```
 
-### 3. Install dependencies
+### 3) Install dependencies
 
 ```bash
 cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 4. Run in development mode
+### 4) Run in development mode
 
-Open **two terminals**:
+Open two terminals:
 
 ```bash
-# Terminal 1 – backend
+# Terminal 1: backend
 cd backend
 npm run dev
-# → http://localhost:3001
+# http://localhost:3001
 
-# Terminal 2 – frontend
+# Terminal 2: frontend
 cd frontend
 npm run dev
-# → http://localhost:5173
+# http://localhost:5173
 ```
 
-Navigate to **http://localhost:5173** and start translating!
+Open **http://localhost:5173**.
 
 ---
 
 ## 🐳 Docker Deployment
 
 ```bash
-# Copy and configure the backend environment file
 cp backend/.env.example backend/.env
-# (edit backend/.env with your API keys if desired)
+# Optional: add API keys
 
-# Build and start all services
 docker compose up --build
-
-# The application will be available at http://localhost
 ```
 
-To stop:
+App URL: **http://localhost**
+
+Stop services:
 
 ```bash
 docker compose down
@@ -112,7 +129,7 @@ docker compose down
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | Backend HTTP port |
-| `NODE_ENV` | `development` | Environment |
+| `NODE_ENV` | `development` | Runtime environment |
 | `FRONTEND_URL` | `http://localhost:5173` | Allowed CORS origin |
 | `UPLOAD_DIR` | `./uploads` | Temporary upload directory |
 | `OUTPUT_DIR` | `./outputs` | Translated PDF output directory |
@@ -132,11 +149,11 @@ docker compose down
 
 ## 🔌 Translation Provider Priority
 
-The backend tries providers in this order:
+Provider order:
 
-1. **DeepL** — if `DEEPL_API_KEY` is set
-2. **OpenAI** (GPT-4o mini) — if `OPENAI_API_KEY` is set
-3. **Mock** — always available; prefixes translated text with `[XX]` for easy identification
+1. **DeepL** (`DEEPL_API_KEY` set)
+2. **OpenAI** (`OPENAI_API_KEY` set)
+3. **Mock** (always available, prefixes output with `[XX]`)
 
 ---
 
@@ -144,69 +161,69 @@ The backend tries providers in this order:
 
 ### Health Check
 
-```
+```http
 GET /health
 ```
 
 ### List Languages
 
-```
+```http
 GET /api/languages
 ```
 
 ### Translate a Single PDF
 
-```
+```http
 POST /api/translate
 Content-Type: multipart/form-data
-
-Fields:
-  pdf         File       Required. PDF file (max 50 MB)
-  sourceLang  string     Language code or "auto" (default: "auto")
-  targetLang  string     Required. Target language code (e.g. "es")
-  options     JSON string Translation options (see below)
 ```
 
-Returns `202 Accepted` with `{ jobId }`.
+Fields:
+- `pdf` (File, required, max 50 MB)
+- `sourceLang` (string, optional, default `auto`)
+- `targetLang` (string, required)
+- `options` (JSON string, optional)
+
+Response: `202 Accepted` with `{ jobId }`
 
 ### Check Job Status
 
-```
+```http
 GET /api/translate/status/:jobId
 ```
 
 ### Download Translated PDF
 
-```
+```http
 GET /api/translate/download/:jobId
 ```
 
 ### Translation History
 
-```
+```http
 GET /api/translate/history
 ```
 
 ### Delete a Job
 
-```
+```http
 DELETE /api/translate/:jobId
 ```
 
 ### Batch Translation
 
-```
+```http
 POST /api/translate/batch
 Content-Type: multipart/form-data
-
-Fields:
-  pdfs[]      File[]     Up to 10 PDF files
-  sourceLang  string     Language code or "auto"
-  targetLang  string     Target language code
-  options     JSON string Translation options
 ```
 
-### Translation Options Object
+Fields:
+- `pdfs[]` (File[], up to 10)
+- `sourceLang` (string)
+- `targetLang` (string)
+- `options` (JSON string)
+
+Translation options example:
 
 ```json
 {
@@ -224,86 +241,51 @@ Fields:
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing and Validation
 
-### Backend tests
+### Backend
 
 ```bash
 cd backend
+npm run build
 npm test
 ```
 
-Runs Jest unit tests for:
-- `TranslationService` (mock provider, citations, proper names, etc.)
-- `TranslationStore` (CRUD, ordering)
-
-### Frontend type-check
+### Frontend
 
 ```bash
 cd frontend
-npx tsc --noEmit
+npm run lint
+npm run build
 ```
 
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 PolyGlot/
 ├── backend/
 │   ├── src/
 │   │   ├── controllers/
-│   │   │   └── translationController.ts   # Route handlers
 │   │   ├── middleware/
-│   │   │   ├── errorHandler.ts
-│   │   │   └── upload.ts                  # Multer config
 │   │   ├── routes/
-│   │   │   └── index.ts
 │   │   ├── services/
-│   │   │   ├── pdfExtractor.ts            # PDF → TextBlocks
-│   │   │   ├── pdfGenerator.ts            # TextBlocks → PDF
-│   │   │   ├── translationService.ts      # Provider pattern
-│   │   │   └── translationStore.ts        # In-memory job store
 │   │   ├── types/
-│   │   │   └── index.ts
 │   │   ├── utils/
-│   │   │   └── logger.ts
-│   │   └── index.ts                       # Express app entry
+│   │   └── index.ts
 │   ├── Dockerfile
-│   ├── .env.example
-│   ├── package.json
-│   └── tsconfig.json
-│
+│   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── FileUploadZone.tsx
-│   │   │   ├── HistoryTable.tsx
-│   │   │   ├── LanguageSelector.tsx
-│   │   │   ├── TranslationOptionsPanel.tsx
-│   │   │   └── TranslationStatus.tsx
 │   │   ├── hooks/
-│   │   │   └── useJobPolling.ts
 │   │   ├── pages/
-│   │   │   ├── HistoryPage.tsx
-│   │   │   └── TranslatorPage.tsx
 │   │   ├── services/
-│   │   │   └── api.ts
-│   │   ├── types/
-│   │   │   └── index.ts
-│   │   ├── App.tsx
-│   │   ├── App.css
-│   │   └── main.tsx
+│   │   └── types/
 │   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── .env.example
-│   ├── package.json
-│   └── vite.config.ts
-│
+│   └── package.json
 ├── samples/
-│   ├── sample-english.pdf       # English test document (2 pages)
-│   └── sample-multilingual.pdf  # Mixed-language test document
-│
 ├── docker-compose.yml
 └── README.md
 ```
@@ -312,11 +294,11 @@ PolyGlot/
 
 ## 🔒 Privacy & Security
 
-- **Temporary storage**: uploaded files are deleted immediately after processing
-- **Rate limiting**: 100 requests / 15 minutes per IP
-- **File type validation**: only PDF files are accepted
-- **File size limit**: 50 MB per file
-- **CORS**: restricted to the configured `FRONTEND_URL`
+- Uploaded files are temporary and deleted after processing
+- Rate limiting: `100 requests per 15 minutes per IP`
+- Only PDF files are accepted
+- Per-file upload size limit: `50 MB`
+- CORS restricted to configured `FRONTEND_URL`
 
 ---
 
@@ -324,12 +306,12 @@ PolyGlot/
 
 - [ ] Persistent database (PostgreSQL)
 - [ ] User authentication and per-user history
-- [ ] True coordinate-based layout preservation (using pdf-lib text positions)
-- [ ] OCR for text in images
-- [ ] Export as Word (.docx) or HTML
+- [ ] Better coordinate-based layout preservation
+- [ ] OCR for image text
+- [ ] Export to `.docx` or HTML
 - [ ] Password-protected PDF support
-- [ ] WebSocket progress updates (instead of polling)
-- [ ] Preview side-by-side (original vs translated)
+- [ ] WebSocket progress updates
+- [ ] Side-by-side preview (original vs translated)
 
 ---
 
