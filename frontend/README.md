@@ -15,6 +15,8 @@ Create `frontend/.env` from `frontend/.env.example`.
 VITE_API_URL=http://localhost:3001/api
 ```
 
+If `VITE_API_URL` is unset, the app uses `http://localhost:3001/api` in local development and `/api` in production builds (including Docker behind the bundled Nginx proxy).
+
 ## Scripts
 
 ```bash
@@ -38,3 +40,4 @@ Default dev URL: `http://localhost:5173`
 
 The frontend expects the backend API to be available at `VITE_API_URL`.
 For local development with default settings, start backend on `http://localhost:3001`.
+In Docker, the default production build targets the same-origin `/api` path so Nginx can proxy requests to the backend container.

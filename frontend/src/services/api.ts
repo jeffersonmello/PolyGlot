@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { ApiResponse, TranslationOptions, TranslationRecord, LanguageMap } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api');
 
 const api = axios.create({ baseURL: BASE_URL });
 

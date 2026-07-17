@@ -143,7 +143,7 @@ docker compose down
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VITE_API_URL` | `http://localhost:3001/api` | Backend API URL |
+| `VITE_API_URL` | `http://localhost:3001/api` | Backend API URL for local development; production builds default to `/api` when unset |
 
 ---
 
