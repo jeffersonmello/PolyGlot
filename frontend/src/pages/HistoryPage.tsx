@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import HistoryTable from '../components/HistoryTable';
 import { fetchHistory } from '../services/api';
@@ -7,8 +7,11 @@ import type { TranslationRecord } from '../types';
 const HistoryPage: React.FC = () => {
   const [records, setRecords] = useState<TranslationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  // Use a ref to always access the latest records inside the interval callback
+  const recordsRef = useRef<TranslationRecord[]>(records);
+  recordsRef.current = records;
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const data = await fetchHistory();
       setRecords(data);
@@ -17,19 +20,19 @@ const HistoryPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
     // Auto-refresh every 5 seconds while any job is active
     const interval = setInterval(() => {
-      const hasActive = records.some(
+      const hasActive = recordsRef.current.some(
         (r) => r.status === 'pending' || r.status === 'processing'
       );
       if (hasActive) load();
     }, 5000);
     return () => clearInterval(interval);
-  }, [records.length]);
+  }, [load]);
 
   const handleDelete = (id: string) => {
     setRecords((prev) => prev.filter((r) => r.id !== id));

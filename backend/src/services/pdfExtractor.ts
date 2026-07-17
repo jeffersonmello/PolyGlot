@@ -1,7 +1,11 @@
 import pdfParse from 'pdf-parse';
 import fs from 'fs';
+import path from 'path';
 import { PdfExtractionResult, TextBlock } from '../types';
 import { logger } from '../utils/logger';
+import { assertWithinDirectory } from '../utils/pathGuard';
+
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
 
 /**
  * Detects the probable language of a text string using simple heuristics.
@@ -45,6 +49,9 @@ function detectLanguageHeuristic(text: string): string {
  */
 export async function extractPdfContent(filePath: string): Promise<PdfExtractionResult> {
   logger.info(`Extracting content from PDF: ${filePath}`);
+
+  // Guard: ensure filePath is within the designated uploads directory
+  assertWithinDirectory(UPLOAD_DIR, filePath);
 
   const dataBuffer = fs.readFileSync(filePath);
 

@@ -9,6 +9,8 @@ import { generateTranslatedPdf, OUTPUT_DIR_PATH } from '../services/pdfGenerator
 import { translationStore } from '../services/translationStore';
 import { logger } from '../utils/logger';
 import { SUPPORTED_LANGUAGES } from '../types';
+import { isValidUuid, safeResolvePath, assertWithinDirectory } from '../utils/pathGuard';
+import { UPLOAD_DIR_PATH } from '../middleware/upload';
 
 const DEFAULT_OPTIONS: TranslationOptions = {
   preserveFormatting: true,
@@ -132,8 +134,13 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
         error: msg,
       });
     } finally {
-      // Clean up uploaded file
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      // Clean up uploaded file — validate path is within upload dir before unlinking
+      try {
+        assertWithinDirectory(UPLOAD_DIR_PATH, file.path);
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      } catch (e) {
+        logger.warn(`Skipping cleanup of unexpected path: ${file.path}`);
+      }
     }
   });
 };
@@ -141,6 +148,11 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
 // GET /api/translate/status/:jobId
 export const getJobStatus = async (req: Request, res: Response): Promise<void> => {
   const { jobId } = req.params;
+
+  if (!isValidUuid(jobId)) {
+    res.status(400).json({ success: false, error: 'Invalid job ID' } as ApiResponse);
+    return;
+  }
   const record = translationStore.get(jobId);
 
   if (!record) {
@@ -154,6 +166,12 @@ export const getJobStatus = async (req: Request, res: Response): Promise<void> =
 // GET /api/translate/download/:jobId
 export const downloadTranslatedPdf = async (req: Request, res: Response): Promise<void> => {
   const { jobId } = req.params;
+
+  if (!isValidUuid(jobId)) {
+    res.status(400).json({ success: false, error: 'Invalid job ID' } as ApiResponse);
+    return;
+  }
+
   const record = translationStore.get(jobId);
 
   if (!record) {
@@ -169,14 +187,16 @@ export const downloadTranslatedPdf = async (req: Request, res: Response): Promis
     return;
   }
 
-  const filePath = path.join(OUTPUT_DIR_PATH, `${jobId}-translated.pdf`);
+  // safeResolvePath ensures the path stays within OUTPUT_DIR_PATH
+  const filePath = safeResolvePath(OUTPUT_DIR_PATH, `${jobId}-translated.pdf`);
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ success: false, error: 'Translated file not found' } as ApiResponse);
     return;
   }
 
-  const downloadName = `translated-${record.originalFileName}`;
-  res.download(filePath, downloadName, (err) => {
+  // Sanitize the download filename: strip path separators and use only the basename
+  const safeDownloadName = `translated-${path.basename(record.originalFileName)}`;
+  res.download(filePath, safeDownloadName, (err) => {
     if (err) {
       logger.error(`Download failed for job ${jobId}: ${err.message}`);
     }
@@ -192,6 +212,12 @@ export const getHistory = async (_req: Request, res: Response): Promise<void> =>
 // DELETE /api/translate/:jobId
 export const deleteJob = async (req: Request, res: Response): Promise<void> => {
   const { jobId } = req.params;
+
+  if (!isValidUuid(jobId)) {
+    res.status(400).json({ success: false, error: 'Invalid job ID' } as ApiResponse);
+    return;
+  }
+
   const record = translationStore.get(jobId);
 
   if (!record) {
@@ -199,8 +225,8 @@ export const deleteJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // Remove output file if it exists
-  const filePath = path.join(OUTPUT_DIR_PATH, `${jobId}-translated.pdf`);
+  // safeResolvePath ensures the path stays within OUTPUT_DIR_PATH
+  const filePath = safeResolvePath(OUTPUT_DIR_PATH, `${jobId}-translated.pdf`);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
   translationStore.delete(jobId);
@@ -280,7 +306,12 @@ export const translateBatch = async (req: Request, res: Response): Promise<void>
           error: msg,
         });
       } finally {
-        if (fs.existsSync(capturedFile.path)) fs.unlinkSync(capturedFile.path);
+        try {
+          assertWithinDirectory(UPLOAD_DIR_PATH, capturedFile.path);
+          if (fs.existsSync(capturedFile.path)) fs.unlinkSync(capturedFile.path);
+        } catch (e) {
+          logger.warn(`Skipping cleanup of unexpected path: ${capturedFile.path}`);
+        }
       }
     });
   }
