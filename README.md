@@ -295,7 +295,7 @@ PolyGlot/
 ## 🔒 Privacy & Security
 
 - Uploaded files are temporary and deleted after processing
-- Rate limiting: `100 requests / 15 minutes / IP`
+- Rate limiting: `100 requests per 15 minutes per IP`
 - Only PDF files are accepted
 - Per-file upload size limit: `50 MB`
 - CORS restricted to configured `FRONTEND_URL`
