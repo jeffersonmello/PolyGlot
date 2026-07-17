@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import FileUploadZone from '../components/FileUploadZone';
 import LanguageSelector from '../components/LanguageSelector';
@@ -11,6 +11,13 @@ import {
 } from '../services/api';
 import { useJobWebSocket } from '../hooks/useJobWebSocket';
 import type { TranslationOptions, LanguageMap } from '../types';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Progress } from '../components/ui/progress';
+import { Separator } from '../components/ui/separator';
+import { Checkbox } from '../components/ui/checkbox';
+import { Label } from '../components/ui/label';
+import { ArrowRight, Layers, Zap } from 'lucide-react';
 
 const DEFAULT_OPTIONS: TranslationOptions = {
   preserveFormatting: true,
@@ -38,19 +45,17 @@ const TranslatorPage: React.FC = () => {
 
   const { job, error: wsError } = useJobWebSocket(activeJobId);
 
-  // Load language list on mount
   useEffect(() => {
     fetchLanguages()
       .then(setLanguages)
       .catch(() => toast.error('Failed to load language list'));
   }, []);
 
-  // Show WebSocket errors
   useEffect(() => {
     if (wsError) toast.error(`Status update error: ${wsError}`);
   }, [wsError]);
 
-  const handleTranslate = async () => {
+  const handleTranslate = useCallback(async () => {
     if (files.length === 0) {
       toast.warn('Please select at least one PDF file');
       return;
@@ -89,91 +94,143 @@ const TranslatorPage: React.FC = () => {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  };
+  }, [files, targetLang, batchMode, sourceLang, options]);
 
   const isProcessing = isUploading || (job && (job.status === 'pending' || job.status === 'processing'));
 
-  return (
-    <div className="page-content">
-      <div className="translator-card">
-        {/* Language selection */}
-        <LanguageSelector
-          languages={languages}
-          sourceLang={sourceLang}
-          targetLang={targetLang}
-          onSourceChange={setSourceLang}
-          onTargetChange={setTargetLang}
-          disabled={!!isProcessing}
-        />
+  // Keyboard shortcut: Cmd/Ctrl + Enter to translate
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !isProcessing && files.length > 0) {
+        handleTranslate();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isProcessing, files.length, handleTranslate]);
 
-        {/* Batch toggle */}
-        <div className="batch-toggle">
-          <label className="toggle-label">
-            <input
-              type="checkbox"
+  return (
+    <div className="space-y-6">
+      {/* Main translation card */}
+      <Card className="shadow-md border-border/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base text-foreground/90">
+            <Zap className="w-4 h-4 text-primary" />
+            Translation Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Language selection */}
+          <LanguageSelector
+            languages={languages}
+            sourceLang={sourceLang}
+            targetLang={targetLang}
+            onSourceChange={setSourceLang}
+            onTargetChange={setTargetLang}
+            disabled={!!isProcessing}
+          />
+
+          <Separator />
+
+          {/* File upload */}
+          <FileUploadZone
+            files={files}
+            onFilesChange={setFiles}
+            multiple={batchMode}
+          />
+
+          {/* Upload progress */}
+          {isUploading && uploadProgress > 0 && (
+            <div className="flex items-center gap-3">
+              <Progress value={uploadProgress} className="flex-1 h-2" />
+              <span className="text-xs font-semibold text-primary w-10 text-right">{uploadProgress}%</span>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Batch mode toggle */}
+          <div className="flex items-center gap-2.5">
+            <Checkbox
+              id="batch-mode"
               checked={batchMode}
-              onChange={(e) => setBatchMode(e.target.checked)}
+              onCheckedChange={(checked) => setBatchMode(checked === true)}
               disabled={!!isProcessing}
             />
-            <span>Batch mode (translate multiple PDFs at once)</span>
-          </label>
-        </div>
-
-        {/* File upload */}
-        <FileUploadZone
-          files={files}
-          onFilesChange={setFiles}
-          multiple={batchMode}
-        />
-
-        {/* Upload progress */}
-        {isUploading && uploadProgress > 0 && (
-          <div className="progress-bar-wrapper">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${uploadProgress}%` }}
-            />
-            <span className="progress-label">{uploadProgress}%</span>
+            <Label htmlFor="batch-mode" className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+              <Layers className="w-3.5 h-3.5 text-muted-foreground" />
+              Batch mode
+              <span className="text-xs text-muted-foreground font-normal">(translate multiple PDFs at once)</span>
+            </Label>
           </div>
-        )}
 
-        {/* Options */}
-        <TranslationOptionsPanel options={options} onChange={setOptions} />
+          {/* Options */}
+          <TranslationOptionsPanel options={options} onChange={setOptions} />
 
-        {/* Translate button */}
-        <button
-          type="button"
-          className="btn btn-primary btn-large translate-btn"
-          onClick={handleTranslate}
-          disabled={!!isProcessing || files.length === 0}
-        >
-          {isProcessing ? '⚙️ Translating…' : '🌐 Translate PDF'}
-        </button>
-      </div>
+          {/* Translate button */}
+          <Button
+            type="button"
+            size="lg"
+            className="w-full gap-2 text-base font-semibold shadow-md hover:shadow-lg transition-shadow"
+            onClick={handleTranslate}
+            disabled={!!isProcessing || files.length === 0}
+          >
+            {isProcessing ? (
+              <>
+                <span className="animate-spin">⚙️</span> Translating…
+              </>
+            ) : (
+              <>
+                Translate Now
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </Button>
+          {files.length > 0 && !isProcessing && (
+            <p className="text-center text-xs text-muted-foreground">
+              Press <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs">⌘ Enter</kbd> to translate
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Active single job status */}
       {job && (
-        <div className="status-section">
-          <h3>Current Translation</h3>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            Active Translation
+          </h3>
           <TranslationStatus job={job} />
         </div>
       )}
 
       {/* Batch job IDs list */}
       {batchJobIds.length > 0 && (
-        <div className="status-section">
-          <h3>Batch Jobs Queued ({batchJobIds.length})</h3>
-          <ul className="batch-ids">
-            {batchJobIds.map((id) => (
-              <li key={id}>
-                Job <code>{id.slice(0, 8)}…</code> — check History tab for status
-              </li>
-            ))}
-          </ul>
-        </div>
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">
+              Batch Jobs Queued ({batchJobIds.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1.5">
+              {batchJobIds.map((id) => (
+                <li key={id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0" />
+                  Job{' '}
+                  <code className="font-mono text-xs bg-muted rounded px-1.5 py-0.5">
+                    {id.slice(0, 8)}…
+                  </code>{' '}
+                  — check History tab for status
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 };
 
 export default TranslatorPage;
+
