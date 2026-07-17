@@ -1,11 +1,6 @@
 import pdfParse from 'pdf-parse';
-import fs from 'fs';
-import path from 'path';
 import { PdfExtractionResult, TextBlock } from '../types';
 import { logger } from '../utils/logger';
-import { assertWithinDirectory } from '../utils/pathGuard';
-
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
 
 /**
  * Detects the probable language of a text string using simple heuristics.
@@ -45,18 +40,14 @@ function detectLanguageHeuristic(text: string): string {
 }
 
 /**
- * Extracts text and metadata from a PDF file.
+ * Extracts text and metadata from a PDF buffer.
+ * Accepts a Buffer to avoid any file-path operations in this layer.
  */
-export async function extractPdfContent(filePath: string): Promise<PdfExtractionResult> {
-  logger.info(`Extracting content from PDF: ${filePath}`);
-
-  // Guard: ensure filePath is within the designated uploads directory
-  assertWithinDirectory(UPLOAD_DIR, filePath);
-
-  const dataBuffer = fs.readFileSync(filePath);
+export async function extractPdfContent(pdfBuffer: Buffer): Promise<PdfExtractionResult> {
+  logger.info('Extracting content from PDF buffer');
 
   try {
-    const data = await pdfParse(dataBuffer);
+    const data = await pdfParse(pdfBuffer);
 
     const fullText = data.text || '';
     const lines = fullText.split('\n').filter((line) => line.trim().length > 0);

@@ -16,8 +16,9 @@ const storage = multer.diskStorage({
   destination: (_req: Request, _file: Express.Multer.File, cb) => {
     cb(null, UPLOAD_DIR);
   },
-  filename: (_req: Request, file: Express.Multer.File, cb) => {
-    const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+  filename: (_req: Request, _file: Express.Multer.File, cb) => {
+    // Filename is 100% server-generated — no user-provided data included
+    const uniqueName = `${uuidv4()}-${Date.now()}.pdf`;
     cb(null, uniqueName);
   },
 });

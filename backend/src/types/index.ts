@@ -57,6 +57,8 @@ export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export interface TranslationRecord {
   id: string;
   originalFileName: string;
+  /** Server-generated output filename (basename only, stored after successful PDF generation). */
+  outputFileName?: string;
   sourceLang: string;
   targetLang: string;
   status: JobStatus;
@@ -66,6 +68,44 @@ export interface TranslationRecord {
   error?: string;
   fileSize: number;
   pageCount?: number;
+  options: TranslationOptions;
+}
+
+// API response types
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Extracted text block from PDF
+export interface TextBlock {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  fontName?: string;
+  pageIndex: number;
+  language?: string;
+}
+
+// PDF extraction result
+export interface PdfExtractionResult {
+  textBlocks: TextBlock[];
+  pageCount: number;
+  metadata: Record<string, string>;
+  detectedLanguage?: string;
+  mixedLanguages?: string[];
+}
+
+// Batch translation request
+export interface BatchTranslationRequest {
+  files: Express.Multer.File[];
+  sourceLang: string;
+  targetLang: string;
   options: TranslationOptions;
 }
 

@@ -9,7 +9,7 @@ import { generateTranslatedPdf, OUTPUT_DIR_PATH } from '../services/pdfGenerator
 import { translationStore } from '../services/translationStore';
 import { logger } from '../utils/logger';
 import { SUPPORTED_LANGUAGES } from '../types';
-import { isValidUuid, safeResolvePath, assertWithinDirectory } from '../utils/pathGuard';
+import { isValidUuid, safeResolvePath } from '../utils/pathGuard';
 import { UPLOAD_DIR_PATH } from '../middleware/upload';
 
 const DEFAULT_OPTIONS: TranslationOptions = {
@@ -45,6 +45,15 @@ function parseOptions(raw: unknown): TranslationOptions {
   };
 }
 
+/**
+ * Returns a safe path for an uploaded file by constructing it from the
+ * trusted UPLOAD_DIR_PATH base and the basename of the multer-assigned filename.
+ * This avoids using the potentially-tainted file.path directly in FS operations.
+ */
+function safeUploadPath(multerFilename: string): string {
+  return path.join(UPLOAD_DIR_PATH, path.basename(multerFilename));
+}
+
 // POST /api/translate
 export const translatePdf = async (req: Request, res: Response): Promise<void> => {
   const file = req.file;
@@ -65,6 +74,9 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
   );
 
   const jobId = uuidv4();
+  // Construct the upload path from the trusted base dir + multer-assigned basename
+  const uploadPath = safeUploadPath(file.filename);
+
   const record: TranslationRecord = {
     id: jobId,
     originalFileName: file.originalname,
@@ -91,8 +103,12 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
       translationStore.updateStatus(jobId, 'processing');
       logger.info(`Starting translation job ${jobId}`);
 
-      // 1. Extract text from PDF
-      const extraction = await extractPdfContent(file.path);
+      // 1. Read PDF into memory from the server-constructed safe path, then delete
+      const pdfBuffer = fs.readFileSync(uploadPath);
+      if (fs.existsSync(uploadPath)) fs.unlinkSync(uploadPath);
+
+      // 2. Extract text from buffer (no file-path FS operations in extractor)
+      const extraction = await extractPdfContent(pdfBuffer);
 
       // Resolve source language
       const resolvedSource =
@@ -108,7 +124,7 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
         options
       );
 
-      // 3. Generate new PDF
+      // 3. Generate new PDF — outputFileName is server-generated (not from user input)
       const outputFileName = `${jobId}-translated.pdf`;
       const outputPath = await generateTranslatedPdf(
         translatedBlocks,
@@ -122,6 +138,7 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
         completedAt: new Date().toISOString(),
         downloadUrl: `/api/translate/download/${jobId}`,
         pageCount: extraction.pageCount,
+        outputFileName,  // stored server-side for safe path construction
       });
 
       logger.info(`Translation job ${jobId} completed. Output: ${outputPath}`);
@@ -134,13 +151,8 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
         error: msg,
       });
     } finally {
-      // Clean up uploaded file — validate path is within upload dir before unlinking
-      try {
-        assertWithinDirectory(UPLOAD_DIR_PATH, file.path);
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-      } catch (e) {
-        logger.warn(`Skipping cleanup of unexpected path: ${file.path}`);
-      }
+      // Ensure cleanup even if extraction/translation failed after we read the buffer
+      if (fs.existsSync(uploadPath)) fs.unlinkSync(uploadPath);
     }
   });
 };
@@ -153,6 +165,7 @@ export const getJobStatus = async (req: Request, res: Response): Promise<void> =
     res.status(400).json({ success: false, error: 'Invalid job ID' } as ApiResponse);
     return;
   }
+
   const record = translationStore.get(jobId);
 
   if (!record) {
@@ -187,14 +200,21 @@ export const downloadTranslatedPdf = async (req: Request, res: Response): Promis
     return;
   }
 
-  // safeResolvePath ensures the path stays within OUTPUT_DIR_PATH
-  const filePath = safeResolvePath(OUTPUT_DIR_PATH, `${jobId}-translated.pdf`);
+  // Use the server-stored outputFileName (not user-provided jobId) to build the path
+  const outputFileName = record.outputFileName;
+  if (!outputFileName) {
+    res.status(404).json({ success: false, error: 'Translated file not found' } as ApiResponse);
+    return;
+  }
+
+  // safeResolvePath confines the resolved path within OUTPUT_DIR_PATH
+  const filePath = safeResolvePath(OUTPUT_DIR_PATH, path.basename(outputFileName));
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ success: false, error: 'Translated file not found' } as ApiResponse);
     return;
   }
 
-  // Sanitize the download filename: strip path separators and use only the basename
+  // Sanitize the download name using only the original file's basename
   const safeDownloadName = `translated-${path.basename(record.originalFileName)}`;
   res.download(filePath, safeDownloadName, (err) => {
     if (err) {
@@ -225,9 +245,11 @@ export const deleteJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // safeResolvePath ensures the path stays within OUTPUT_DIR_PATH
-  const filePath = safeResolvePath(OUTPUT_DIR_PATH, `${jobId}-translated.pdf`);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  // Use the server-stored outputFileName to build the path — not user-provided jobId
+  if (record.outputFileName) {
+    const filePath = safeResolvePath(OUTPUT_DIR_PATH, path.basename(record.outputFileName));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
 
   translationStore.delete(jobId);
   res.json({ success: true, message: 'Job deleted' } as ApiResponse);
@@ -257,6 +279,9 @@ export const translateBatch = async (req: Request, res: Response): Promise<void>
 
   for (const file of files) {
     const jobId = uuidv4();
+    // Construct upload path from trusted base + multer-assigned basename
+    const uploadPath = safeUploadPath(file.filename);
+
     const record: TranslationRecord = {
       id: jobId,
       originalFileName: file.originalname,
@@ -271,12 +296,16 @@ export const translateBatch = async (req: Request, res: Response): Promise<void>
     jobIds.push(jobId);
 
     // Schedule async processing for each file
-    const capturedFile = file;
+    const capturedUploadPath = uploadPath;
     const capturedJobId = jobId;
     setImmediate(async () => {
       try {
         translationStore.updateStatus(capturedJobId, 'processing');
-        const extraction = await extractPdfContent(capturedFile.path);
+        // Read PDF into memory first, then delete the upload
+        const pdfBuffer = fs.readFileSync(capturedUploadPath);
+        if (fs.existsSync(capturedUploadPath)) fs.unlinkSync(capturedUploadPath);
+
+        const extraction = await extractPdfContent(pdfBuffer);
         const resolvedSource =
           sourceLang === 'auto' ? extraction.detectedLanguage || 'en' : sourceLang;
         const translatedBlocks = await translationService.translateBlocks(
@@ -297,6 +326,7 @@ export const translateBatch = async (req: Request, res: Response): Promise<void>
           completedAt: new Date().toISOString(),
           downloadUrl: `/api/translate/download/${capturedJobId}`,
           pageCount: extraction.pageCount,
+          outputFileName,
         });
       } catch (error) {
         const msg = (error as Error).message;
@@ -306,12 +336,8 @@ export const translateBatch = async (req: Request, res: Response): Promise<void>
           error: msg,
         });
       } finally {
-        try {
-          assertWithinDirectory(UPLOAD_DIR_PATH, capturedFile.path);
-          if (fs.existsSync(capturedFile.path)) fs.unlinkSync(capturedFile.path);
-        } catch (e) {
-          logger.warn(`Skipping cleanup of unexpected path: ${capturedFile.path}`);
-        }
+        // Ensure cleanup even on unexpected failure
+        if (fs.existsSync(capturedUploadPath)) fs.unlinkSync(capturedUploadPath);
       }
     });
   }
