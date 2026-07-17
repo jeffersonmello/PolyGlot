@@ -10,11 +10,13 @@ const OUTPUT_DIR = process.env.OUTPUT_DIR || path.join(__dirname, '../../outputs
  * Replaces characters that cannot be encoded in WinAnsi (Windows-1252) with a space.
  * Standard PDF fonts (e.g. Helvetica) only support code points up to U+00FF.
  */
+const MAX_WINANSI_CODEPOINT = 0xff;
+
 function sanitizeForWinAnsi(text: string): string {
   return Array.from(text)
     .map((ch) => {
       const cp = ch.codePointAt(0) ?? 0;
-      return cp > 0xff ? ' ' : ch;
+      return cp > MAX_WINANSI_CODEPOINT ? ' ' : ch;
     })
     .join('');
 }
