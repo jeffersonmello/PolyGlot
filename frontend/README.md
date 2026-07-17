@@ -21,7 +21,7 @@ VITE_API_URL=http://localhost:3001/api
 npm run dev    # start Vite dev server
 npm run lint   # run Oxlint
 npm run build  # type-check + production build
-npm run preview
+npm run preview # preview the production build locally
 ```
 
 Default dev URL: `http://localhost:5173`
