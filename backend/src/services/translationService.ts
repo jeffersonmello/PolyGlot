@@ -33,6 +33,7 @@ export class MockTranslationProvider implements TranslationProvider {
       de: '[DE] ',
       it: '[IT] ',
       pt: '[PT] ',
+      'pt-BR': '[PT-BR] ',
       ru: '[RU] ',
       zh: '[ZH] ',
       ja: '[JA] ',

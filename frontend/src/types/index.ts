@@ -27,6 +27,8 @@ export interface TranslationRecord {
   error?: string;
   fileSize: number;
   pageCount?: number;
+  translatedPageCount?: number;
+  progress?: number;
   options: TranslationOptions;
 }
 

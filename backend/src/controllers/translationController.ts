@@ -2,11 +2,12 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import { TranslationOptions, ApiResponse, TranslationRecord } from '../types';
+import { TranslationOptions, ApiResponse, TranslationRecord, TextBlock } from '../types';
 import { extractPdfContent } from '../services/pdfExtractor';
 import { translationService } from '../services/translationService';
 import { generateTranslatedPdf, OUTPUT_DIR_PATH } from '../services/pdfGenerator';
 import { translationStore } from '../services/translationStore';
+import { wsManager } from '../services/wsManager';
 import { logger } from '../utils/logger';
 import { SUPPORTED_LANGUAGES } from '../types';
 import { isValidUuid, safeResolvePath } from '../utils/pathGuard';
@@ -101,6 +102,7 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
   setImmediate(async () => {
     try {
       translationStore.updateStatus(jobId, 'processing');
+      wsManager.broadcast(jobId, translationStore.get(jobId)!);
       logger.info(`Starting translation job ${jobId}`);
 
       // 1. Read PDF into memory from the server-constructed safe path, then delete
@@ -114,20 +116,46 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
       const resolvedSource =
         sourceLang === 'auto' ? extraction.detectedLanguage || 'en' : sourceLang;
 
-      translationStore.update(jobId, { pageCount: extraction.pageCount });
+      translationStore.update(jobId, { pageCount: extraction.pageCount, translatedPageCount: 0, progress: 0 });
+      wsManager.broadcast(jobId, translationStore.get(jobId)!);
 
-      // 2. Translate text blocks
-      const translatedBlocks = await translationService.translateBlocks(
-        extraction.textBlocks,
-        resolvedSource,
-        targetLang,
-        options
+      // 3. Group blocks by page and translate page-by-page to track progress.
+      // Determine the number of pages from both the extraction result and the
+      // actual block indices so out-of-range pageIndex values are never dropped.
+      const maxPageIndex = extraction.textBlocks.reduce(
+        (max, b) => Math.max(max, b.pageIndex ?? 0),
+        0
       );
+      const totalPages = Math.max(extraction.pageCount, maxPageIndex + 1, 1);
 
-      // 3. Generate new PDF — outputFileName is server-generated (not from user input)
+      const blocksByPage: TextBlock[][] = Array.from({ length: totalPages }, () => []);
+      for (const block of extraction.textBlocks) {
+        const idx = block.pageIndex ?? 0;
+        blocksByPage[idx].push(block);
+      }
+
+      const allTranslatedBlocks: TextBlock[] = [];
+
+      for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+        const pageBlocks = blocksByPage[pageIdx];
+        const translatedPage = await translationService.translateBlocks(
+          pageBlocks,
+          resolvedSource,
+          targetLang,
+          options
+        );
+        allTranslatedBlocks.push(...translatedPage);
+
+        const translatedPageCount = pageIdx + 1;
+        const progress = Math.round((translatedPageCount / totalPages) * 100);
+        translationStore.update(jobId, { translatedPageCount, progress });
+        wsManager.broadcast(jobId, translationStore.get(jobId)!);
+      }
+
+      // 4. Generate new PDF — outputFileName is server-generated (not from user input)
       const outputFileName = `${jobId}-translated.pdf`;
       const outputPath = await generateTranslatedPdf(
-        translatedBlocks,
+        allTranslatedBlocks,
         extraction.pageCount,
         outputFileName,
         extraction.metadata
@@ -138,8 +166,11 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
         completedAt: new Date().toISOString(),
         downloadUrl: `/api/translate/download/${jobId}`,
         pageCount: extraction.pageCount,
+        translatedPageCount: extraction.pageCount,
+        progress: 100,
         outputFileName,  // stored server-side for safe path construction
       });
+      wsManager.broadcast(jobId, translationStore.get(jobId)!);
 
       logger.info(`Translation job ${jobId} completed. Output: ${outputPath}`);
     } catch (error) {
@@ -150,6 +181,7 @@ export const translatePdf = async (req: Request, res: Response): Promise<void> =
         completedAt: new Date().toISOString(),
         error: msg,
       });
+      wsManager.broadcast(jobId, translationStore.get(jobId)!);
     } finally {
       // Ensure cleanup even if extraction/translation failed after we read the buffer
       if (fs.existsSync(uploadPath)) fs.unlinkSync(uploadPath);
