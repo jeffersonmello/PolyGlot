@@ -9,7 +9,7 @@ import {
   uploadAndTranslate,
   uploadBatch,
 } from '../services/api';
-import { useJobPolling } from '../hooks/useJobPolling';
+import { useJobWebSocket } from '../hooks/useJobWebSocket';
 import type { TranslationOptions, LanguageMap } from '../types';
 
 const DEFAULT_OPTIONS: TranslationOptions = {
@@ -36,7 +36,7 @@ const TranslatorPage: React.FC = () => {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [batchJobIds, setBatchJobIds] = useState<string[]>([]);
 
-  const { job, error: pollError } = useJobPolling(activeJobId);
+  const { job, error: wsError } = useJobWebSocket(activeJobId);
 
   // Load language list on mount
   useEffect(() => {
@@ -45,10 +45,10 @@ const TranslatorPage: React.FC = () => {
       .catch(() => toast.error('Failed to load language list'));
   }, []);
 
-  // Show poll errors
+  // Show WebSocket errors
   useEffect(() => {
-    if (pollError) toast.error(`Status polling error: ${pollError}`);
-  }, [pollError]);
+    if (wsError) toast.error(`Status update error: ${wsError}`);
+  }, [wsError]);
 
   const handleTranslate = async () => {
     if (files.length === 0) {

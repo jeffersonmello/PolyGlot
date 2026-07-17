@@ -7,6 +7,7 @@ export const SUPPORTED_LANGUAGES: Record<string, string> = {
   de: 'German',
   it: 'Italian',
   pt: 'Portuguese',
+  'pt-BR': 'Portuguese (Brazil)',
   ru: 'Russian',
   zh: 'Chinese (Simplified)',
   'zh-TW': 'Chinese (Traditional)',
@@ -68,6 +69,8 @@ export interface TranslationRecord {
   error?: string;
   fileSize: number;
   pageCount?: number;
+  translatedPageCount?: number;
+  progress?: number;
   options: TranslationOptions;
 }
 

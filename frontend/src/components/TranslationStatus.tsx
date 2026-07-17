@@ -27,10 +27,15 @@ const TranslationStatus: React.FC<Props> = ({ job }) => {
   const isProcessing = job.status === 'pending' || job.status === 'processing';
   const downloadUrl = getDownloadUrl(job.id);
 
+  const progress = job.progress ?? 0;
+  const hasProgress = isProcessing && job.pageCount != null && job.pageCount > 0;
+
   return (
     <div className="status-card" style={{ borderLeftColor: color }}>
       <div className="status-header">
-        <span className="status-filename">{job.originalFileName}</span>
+        <span className="status-filename" title={job.originalFileName}>
+          {job.originalFileName}
+        </span>
         <span className="status-badge" style={{ backgroundColor: color }}>
           {label}
         </span>
@@ -41,14 +46,34 @@ const TranslationStatus: React.FC<Props> = ({ job }) => {
           {job.sourceLang === 'auto' ? 'Auto-detect' : job.sourceLang.toUpperCase()} →{' '}
           {job.targetLang.toUpperCase()}
         </span>
-        {job.pageCount && <span>{job.pageCount} pages</span>}
+        {job.pageCount != null && (
+          <span>
+            {isProcessing && job.translatedPageCount != null
+              ? `${job.translatedPageCount} / ${job.pageCount} pages`
+              : `${job.pageCount} pages`}
+          </span>
+        )}
         <span>{(job.fileSize / 1024).toFixed(1)} KB</span>
         <span>{new Date(job.createdAt).toLocaleTimeString()}</span>
       </div>
 
       {isProcessing && (
-        <div className="progress-bar-wrapper">
-          <div className="progress-bar-indeterminate" />
+        <div className="progress-section">
+          {hasProgress ? (
+            <>
+              <div className="progress-bar-wrapper">
+                <div
+                  className="progress-bar-fill"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="progress-label-inline">{progress}%</span>
+            </>
+          ) : (
+            <div className="progress-bar-wrapper">
+              <div className="progress-bar-indeterminate" />
+            </div>
+          )}
         </div>
       )}
 
@@ -65,6 +90,11 @@ const TranslationStatus: React.FC<Props> = ({ job }) => {
           >
             ⬇ Download Translated PDF
           </a>
+          {job.completedAt && (
+            <span className="status-completed-time">
+              Completed at {new Date(job.completedAt).toLocaleTimeString()}
+            </span>
+          )}
         </div>
       )}
     </div>

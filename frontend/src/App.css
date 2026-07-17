@@ -84,8 +84,13 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: v
 
 /* ─── Progress Bar ──────────────────────────────────────────────────────────── */
 .progress-bar-wrapper { position: relative; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: var(--primary); transition: width .3s ease; border-radius: 4px; }
+.progress-bar-fill { height: 100%; background: var(--primary); transition: width .4s ease; border-radius: 4px; }
 .progress-label { position: absolute; right: 0; top: -18px; font-size: .75rem; color: var(--primary); }
+
+/* Inline progress row (bar + percentage side by side) */
+.progress-section { display: flex; align-items: center; gap: .75rem; margin-top: .75rem; }
+.progress-section .progress-bar-wrapper { flex: 1; }
+.progress-label-inline { font-size: .8rem; font-weight: 600; color: var(--primary); white-space: nowrap; min-width: 38px; text-align: right; }
 
 @keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
 .progress-bar-indeterminate { height: 100%; width: 40%; background: var(--primary); border-radius: 4px; animation: indeterminate 1.4s ease-in-out infinite; }
@@ -120,12 +125,13 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: v
 .status-section { margin-top: 1.5rem; }
 .status-section h3 { font-size: 1rem; font-weight: 600; margin-bottom: .75rem; color: var(--text-muted); }
 .status-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.25rem; border-left: 4px solid var(--border); }
-.status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+.status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; gap: .5rem; }
 .status-filename { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
-.status-badge { color: #fff; padding: .2rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
+.status-badge { color: #fff; padding: .2rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; white-space: nowrap; }
 .status-meta { display: flex; gap: 1rem; font-size: .85rem; color: var(--text-muted); flex-wrap: wrap; }
 .status-error { color: var(--danger); font-size: .85rem; margin-top: .5rem; }
-.status-actions { margin-top: 1rem; }
+.status-actions { margin-top: 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.status-completed-time { font-size: .8rem; color: var(--text-muted); }
 
 /* ─── Batch ids ─────────────────────────────────────────────────────────────── */
 .batch-ids { list-style: disc; padding-left: 1.5rem; font-size: .9rem; line-height: 2; }

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
@@ -7,6 +8,7 @@ import fs from 'fs';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
+import { wsManager } from './services/wsManager';
 
 // Ensure logs directory exists
 const logsDir = path.join(__dirname, '../logs');
@@ -29,13 +31,14 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiting
+// Rate limiting – applied to all API routes except the lightweight status endpoint
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests, please try again later' },
+  skip: (req) => req.path.startsWith('/translate/status/'),
 });
 
 app.use('/api', limiter);
@@ -60,9 +63,12 @@ app.get('/health', (_req, res) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ─── HTTP + WebSocket server ──────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+wsManager.init(server);
+
+server.listen(PORT, () => {
   logger.info(`PolyGlot backend running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
