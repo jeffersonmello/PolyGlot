@@ -6,6 +6,21 @@ import { logger } from '../utils/logger';
 
 const OUTPUT_DIR = process.env.OUTPUT_DIR || path.join(__dirname, '../../outputs');
 
+/**
+ * Replaces characters that cannot be encoded in WinAnsi (Windows-1252) with a space.
+ * Standard PDF fonts (e.g. Helvetica) only support code points up to U+00FF.
+ */
+const MAX_WINANSI_CODEPOINT = 0xff;
+
+function sanitizeForWinAnsi(text: string): string {
+  return Array.from(text)
+    .map((ch) => {
+      const cp = ch.codePointAt(0) ?? 0;
+      return cp > MAX_WINANSI_CODEPOINT ? ' ' : ch;
+    })
+    .join('');
+}
+
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
@@ -68,7 +83,7 @@ export async function generateTranslatedPdf(
     for (const block of blocks) {
       const fontSize = Math.min(Math.max(block.fontSize || 12, 8), 24);
       const font = block.text.startsWith('##') ? boldFont : regularFont;
-      const text = block.text.replace(/^#+\s*/, ''); // strip markdown headings
+      const text = sanitizeForWinAnsi(block.text.replace(/^#+\s*/, '')); // strip markdown headings + sanitize encoding
 
       if (cursorY < MARGIN) {
         cursorY = PAGE_HEIGHT - MARGIN;
