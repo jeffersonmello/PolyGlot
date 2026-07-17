@@ -1,5 +1,8 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { UploadCloud, FileText, X, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
 
 interface Props {
   files: File[];
@@ -41,65 +44,95 @@ const FileUploadZone: React.FC<Props> = ({
   };
 
   return (
-    <div className="upload-zone-wrapper">
+    <div className="space-y-3">
       <div
         {...getRootProps()}
-        className={`upload-zone ${isDragActive ? 'drag-active' : ''} ${files.length > 0 ? 'has-files' : ''}`}
+        className={cn(
+          'relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-all cursor-pointer group',
+          isDragActive
+            ? 'border-primary bg-primary/5 shadow-[0_0_0_4px_rgba(99,102,241,0.1)]'
+            : 'border-border/60 bg-slate-50/50 hover:border-primary/50 hover:bg-primary/[0.02]',
+          files.length > 0 && !isDragActive && 'border-indigo-200 bg-indigo-50/30'
+        )}
       >
         <input {...getInputProps()} />
-        <div className="upload-zone-content">
-          <div className="upload-icon">📄</div>
-          {isDragActive ? (
-            <p>Drop your PDF{multiple ? 's' : ''} here…</p>
-          ) : (
-            <>
-              <p>
-                <strong>Drag & drop</strong> your PDF{multiple ? 's' : ''} here
-              </p>
-              <p className="upload-hint">
-                or <span className="link-text">click to browse</span>
-              </p>
-              <p className="upload-limit">
-                Max file size: {maxSizeMb} MB
-                {multiple ? ' · Up to 10 files' : ''}
-              </p>
-            </>
-          )}
+        <div className={cn(
+          'flex items-center justify-center w-14 h-14 rounded-2xl transition-colors',
+          isDragActive ? 'bg-primary/15' : 'bg-white shadow-sm border border-border/40 group-hover:border-primary/30'
+        )}>
+          <UploadCloud className={cn(
+            'w-7 h-7 transition-colors',
+            isDragActive ? 'text-primary' : 'text-slate-400 group-hover:text-primary/70'
+          )} />
         </div>
+
+        {isDragActive ? (
+          <p className="text-sm font-semibold text-primary">
+            Drop your PDF{multiple ? 's' : ''} here…
+          </p>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              Drag & drop your PDF{multiple ? 's' : ''} here
+            </p>
+            <p className="text-xs text-muted-foreground">
+              or <span className="text-primary font-medium underline underline-offset-2">click to browse</span>
+            </p>
+            <p className="text-xs text-muted-foreground/70 pt-1">
+              Max file size: {maxSizeMb} MB{multiple ? ' · Batch mode supported' : ''}
+            </p>
+          </div>
+        )}
       </div>
 
       {fileRejections.length > 0 && (
-        <ul className="rejection-list">
+        <div className="space-y-1.5">
           {fileRejections.map(({ file, errors }) => (
-            <li key={file.name} className="rejection-item">
-              <strong>{file.name}</strong>:{' '}
-              {errors.map((e) => e.message).join(', ')}
-            </li>
+            <div
+              key={file.name}
+              className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2"
+            >
+              <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-xs text-destructive">
+                <span className="font-medium">{file.name}</span>:{' '}
+                {errors.map((e) => e.message).join(', ')}
+              </p>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {files.length > 0 && (
-        <ul className="file-list">
+        <div className="space-y-2">
           {files.map((file, idx) => (
-            <li key={`${file.name}-${idx}`} className="file-item">
-              <span className="file-icon">📎</span>
-              <span className="file-name">{file.name}</span>
-              <span className="file-size">{formatSize(file.size)}</span>
-              <button
+            <div
+              key={`${file.name}-${idx}`}
+              className="flex items-center gap-3 rounded-lg border border-border/50 bg-white px-3 py-2.5 shadow-sm"
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 shrink-0">
+                <FileText className="w-4 h-4 text-red-500" />
+              </div>
+              <span className="flex-1 text-sm font-medium truncate font-mono text-foreground/80">
+                {file.name}
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0">{formatSize(file.size)}</span>
+              <Button
                 type="button"
-                className="remove-btn"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-md hover:bg-destructive/10 hover:text-destructive shrink-0"
                 onClick={() => removeFile(idx)}
                 title="Remove file"
               >
-                ✕
-              </button>
-            </li>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
 };
 
 export default FileUploadZone;
+

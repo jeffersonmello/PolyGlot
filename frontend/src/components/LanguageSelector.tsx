@@ -1,5 +1,15 @@
 import React from 'react';
 import type { LanguageMap } from '../types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Label } from './ui/label';
+import { Button } from './ui/button';
+import { ArrowLeftRight } from 'lucide-react';
 
 interface Props {
   languages: LanguageMap;
@@ -27,51 +37,58 @@ const LanguageSelector: React.FC<Props> = ({
   const targetOptions = Object.entries(languages).filter(([code]) => code !== 'auto');
 
   return (
-    <div className="language-selector">
-      <div className="lang-group">
-        <label htmlFor="source-lang">Source Language</label>
-        <select
-          id="source-lang"
-          value={sourceLang}
-          onChange={(e) => onSourceChange(e.target.value)}
-          disabled={disabled}
-        >
-          {Object.entries(languages).map(([code, name]) => (
-            <option key={code} value={code}>
-              {name}
-            </option>
-          ))}
-        </select>
+    <div className="flex items-end gap-3">
+      <div className="flex-1 space-y-1.5">
+        <Label htmlFor="source-lang" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Source Language
+        </Label>
+        <Select value={sourceLang} onValueChange={onSourceChange} disabled={disabled}>
+          <SelectTrigger id="source-lang" className="h-10 bg-white border-border/60 focus:ring-primary/20">
+            <SelectValue placeholder="Select source language" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(languages).map(([code, name]) => (
+              <SelectItem key={code} value={code}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <button
+      <Button
         type="button"
-        className="swap-btn"
+        variant="outline"
+        size="icon"
         onClick={swapLanguages}
         disabled={disabled || sourceLang === 'auto'}
         title="Swap languages"
         aria-label="Swap source and target languages"
+        className="h-10 w-10 rounded-full border-border/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all mb-0"
       >
-        ⇄
-      </button>
+        <ArrowLeftRight className="h-4 w-4" />
+      </Button>
 
-      <div className="lang-group">
-        <label htmlFor="target-lang">Target Language</label>
-        <select
-          id="target-lang"
-          value={targetLang}
-          onChange={(e) => onTargetChange(e.target.value)}
-          disabled={disabled}
-        >
-          {targetOptions.map(([code, name]) => (
-            <option key={code} value={code}>
-              {name}
-            </option>
-          ))}
-        </select>
+      <div className="flex-1 space-y-1.5">
+        <Label htmlFor="target-lang" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Target Language
+        </Label>
+        <Select value={targetLang} onValueChange={onTargetChange} disabled={disabled}>
+          <SelectTrigger id="target-lang" className="h-10 bg-white border-border/60 focus:ring-primary/20">
+            <SelectValue placeholder="Select target language" />
+          </SelectTrigger>
+          <SelectContent>
+            {targetOptions.map(([code, name]) => (
+              <SelectItem key={code} value={code}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
 };
 
 export default LanguageSelector;
+
